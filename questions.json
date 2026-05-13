@@ -100,6 +100,111 @@
       "options": ["1 和 3", "2（二重）", "0 和 2", "1 和 2"],
       "answer": 1,
       "explanation": "\\(|A - \\lambda I| = \\begin{vmatrix} 2-\\lambda & 1 \\\\ 0 & 2-\\lambda \\end{vmatrix} = (2-\\lambda)^2 = 0\\)\n解得 \\(\\lambda = 2\\)（二重特征值）。这是上三角矩阵，特征值就是对角线元素。"
+    },
+    {
+      "id": 11,
+      "category": "高等数学",
+      "subCategory": "不定积分",
+      "difficulty": "基础",
+      "question": "不定积分 \\(\\int \\frac{1}{x} \\, dx =\\) ?",
+      "options": ["\\(\\ln x + C\\)", "\\(\\ln |x| + C\\)", "\\(\\frac{1}{x^2} + C\\)", "\\(-\\frac{1}{x} + C\\)"],
+      "answer": 1,
+      "explanation": "基本积分公式之一。注意 \\(x \\neq 0\\)，当 \\(x > 0\\) 时 \\(\\int \\frac{1}{x} dx = \\ln x + C\\)；当 \\(x < 0\\) 时，令 \\(x = -t\\)，\\(\\int \\frac{1}{x} dx = \\ln(-x) + C\\)。合并得 \\(\\int \\frac{1}{x} dx = \\ln|x| + C\\)。"
+    },
+    {
+      "id": 12,
+      "category": "高等数学",
+      "subCategory": "不定积分",
+      "difficulty": "基础",
+      "question": "不定积分 \\(\\int \\cos x \\, dx =\\) ?",
+      "options": ["\\(-\\sin x + C\\)", "\\(\\sin x + C\\)", "\\(\\cos x + C\\)", "\\(-\\cos x + C\\)"],
+      "answer": 1,
+      "explanation": "基本积分公式。因为 \\((\\sin x)' = \\cos x\\)，所以 \\(\\int \\cos x \\, dx = \\sin x + C\\)。"
+    },
+    {
+      "id": 13,
+      "category": "高等数学",
+      "subCategory": "不定积分",
+      "difficulty": "基础",
+      "question": "不定积分 \\(\\int \\frac{1}{1+x^2} \\, dx =\\) ?",
+      "options": ["\\(\\ln(1+x^2) + C\\)", "\\(\\arcsin x + C\\)", "\\(\\arctan x + C\\)", "\\(\\frac{x}{1+x^2} + C\\)"],
+      "answer": 2,
+      "explanation": "基本积分公式。因为 \\((\\arctan x)' = \\frac{1}{1+x^2}\\)，所以 \\(\\int \\frac{1}{1+x^2} dx = \\arctan x + C\\)。"
+    },
+    {
+      "id": 14,
+      "category": "高等数学",
+      "subCategory": "不定积分",
+      "difficulty": "基础",
+      "question": "不定积分 \\(\\int x^2 \\, dx =\\) ?",
+      "options": ["\\(\\frac{x^3}{3} + C\\)", "\\(x^3 + C\\)", "\\(2x + C\\)", "\\(\\frac{x^2}{2} + C\\)"],
+      "answer": 0,
+      "explanation": "幂函数积分公式：\\(\\int x^n dx = \\frac{x^{n+1}}{n+1} + C\\)（\\(n \\neq -1\\)）。\n此处 \\(n = 2\\)，所以 \\(\\int x^2 dx = \\frac{x^3}{3} + C\\)。"
+    },
+    {
+      "id": 15,
+      "category": "高等数学",
+      "subCategory": "不定积分",
+      "difficulty": "中等",
+      "question": "不定积分 \\(\\int e^{2x} \\, dx =\\) ?",
+      "options": ["\\(e^{2x} + C\\)", "\\(2e^{2x} + C\\)", "\\(\\frac{1}{2}e^{2x} + C\\)", "\\(\\frac{1}{2}e^{x} + C\\)"],
+      "answer": 2,
+      "explanation": "使用凑微分法（第一换元法）：\\(\\int e^{2x} dx = \\frac{1}{2} \\int e^{2x} d(2x) = \\frac{1}{2}e^{2x} + C\\)。"
+    },
+    {
+      "id": 16,
+      "category": "高等数学",
+      "subCategory": "不定积分",
+      "difficulty": "中等",
+      "question": "不定积分 \\(\\int \\sin 2x \\, dx =\\) ?",
+      "options": ["\\(\\frac{1}{2}\\cos 2x + C\\)", "\\(-\\frac{1}{2}\\cos 2x + C\\)", "\\(\\cos 2x + C\\)", "\\(-\\cos 2x + C\\)"],
+      "answer": 1,
+      "explanation": "凑微分法：\\(\\int \\sin 2x \\, dx = \\frac{1}{2} \\int \\sin 2x \\, d(2x) = -\\frac{1}{2}\\cos 2x + C\\)。"
+    },
+    {
+      "id": 17,
+      "category": "高等数学",
+      "subCategory": "不定积分",
+      "difficulty": "中等",
+      "question": "不定积分 \\(\\int x \\cos x \\, dx =\\) ?",
+      "options": ["\\(x \\sin x + \\cos x + C\\)", "\\(x \\sin x - \\cos x + C\\)", "\\(\\frac{x^2}{2}\\sin x + C\\)", "\\(x \\cos x - \\sin x + C\\)"],
+      "answer": 0,
+      "explanation": "分部积分法：令 \\(u = x\\)，\\(dv = \\cos x \\, dx\\)，则 \\(du = dx\\)，\\(v = \\sin x\\)。\n\\(\\int x \\cos x \\, dx = x \\sin x - \\int \\sin x \\, dx = x \\sin x + \\cos x + C\\)。"
+    },
+    {
+      "id": 18,
+      "category": "高等数学",
+      "subCategory": "不定积分",
+      "difficulty": "中等",
+      "question": "不定积分 \\(\\int \\ln x \\, dx =\\) ?",
+      "options": ["\\(\\frac{\\ln x}{x} + C\\)", "\\(x \\ln x - x + C\\)", "\\(x \\ln x + x + C\\)", "\\(\\ln^2 x + C\\)"],
+      "answer": 1,
+      "explanation": "分部积分法：令 \\(u = \\ln x\\)，\\(dv = dx\\)，则 \\(du = \\frac{1}{x}dx\\)，\\(v = x\\)。\n\\(\\int \\ln x \\, dx = x \\ln x - \\int x \\cdot \\frac{1}{x} \\, dx = x \\ln x - x + C\\)。"
+    },
+    {
+      "id": 19,
+      "category": "高等数学",
+      "subCategory": "不定积分",
+      "difficulty": "较难",
+      "question": "不定积分 \\(\\int \\frac{1}{\\sqrt{1-x^2}} \\, dx =\\) ?",
+      "options": ["\\(\\ln(\\sqrt{1-x^2}) + C\\)", "\\(\\arctan x + C\\)", "\\(\\arcsin x + C\\)", "\\(\\frac{x}{\\sqrt{1-x^2}} + C\\)"],
+      "answer": 2,
+      "explanation": "基本积分公式。因为 \\((\\arcsin x)' = \\frac{1}{\\sqrt{1-x^2}}\\)，所以 \\(\\int \\frac{1}{\\sqrt{1-x^2}} dx = \\arcsin x + C\\)。"
+    },
+    {
+      "id": 20,
+      "category": "高等数学",
+      "subCategory": "不定积分",
+      "difficulty": "较难",
+      "question": "不定积分 \\(\\int \\frac{dx}{x^2 - a^2} \\;(a > 0) =\\) ?",
+      "options": [
+        "\\(\\frac{1}{2a}\\ln\\left|\\frac{x-a}{x+a}\\right| + C\\)",
+        "\\(\\frac{1}{a}\\ln|x^2 - a^2| + C\\)",
+        "\\(\\frac{1}{2a}\\ln|x+a| - \\frac{1}{2a}\\ln|x-a| + C\\)",
+        "\\(\\frac{x}{x^2 - a^2} + C\\)"
+      ],
+      "answer": 0,
+      "explanation": "部分分式分解：\\(\\frac{1}{x^2-a^2} = \\frac{1}{2a}\\left(\\frac{1}{x-a} - \\frac{1}{x+a}\\right)\\)。\n逐项积分得：\\(\\int \\frac{dx}{x^2-a^2} = \\frac{1}{2a}(\\ln|x-a| - \\ln|x+a|) + C = \\frac{1}{2a}\\ln\\left|\\frac{x-a}{x+a}\\right| + C\\)。"
     }
   ]
 }
