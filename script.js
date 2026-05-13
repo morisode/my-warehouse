@@ -11,6 +11,125 @@ let bgCameraStream = null;
 let pendingFile = null;
 let pendingData = null;
 
+// ========== Custom Questions (IndexedDB persistence) ==========
+const DB_NAME = 'MathQuizDB';
+const DB_VERSION = 1;
+const DB_STORE = 'customQuestions';
+let db = null;
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    if (db) return resolve(db);
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onupgradeneeded = (e) => {
+      const database = e.target.result;
+      if (!database.objectStoreNames.contains(DB_STORE)) {
+        database.createObjectStore(DB_STORE, { keyPath: 'id' });
+      }
+    };
+    request.onsuccess = (e) => {
+      db = e.target.result;
+      resolve(db);
+    };
+    request.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function saveCustomQuestion(question) {
+  try {
+    const database = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = database.transaction(DB_STORE, 'readwrite');
+      const store = tx.objectStore(DB_STORE);
+      // Convert base64 image to Blob for efficient IndexedDB storage
+      const questionToStore = { ...question };
+      if (questionToStore.questionImage && questionToStore.questionImage.startsWith('data:')) {
+        questionToStore._hasImage = true;
+        const blob = dataURLtoBlob(questionToStore.questionImage);
+        questionToStore._imageBlob = blob;
+        // Keep a small thumbnail as base64 for quick preview
+        questionToStore.questionImage = '';
+      } else {
+        questionToStore._hasImage = false;
+      }
+      const req = store.put(questionToStore);
+      req.onsuccess = () => resolve();
+      req.onerror = (e) => reject(e.target.error);
+    });
+  } catch (e) {
+    console.error('Failed to save question to IndexedDB:', e);
+  }
+}
+
+async function loadAllCustomQuestions() {
+  try {
+    const database = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = database.transaction(DB_STORE, 'readonly');
+      const store = tx.objectStore(DB_STORE);
+      const req = store.getAll();
+      req.onsuccess = () => {
+        const questions = req.result.map(q => {
+          // Convert Blob back to data URL
+          if (q._hasImage && q._imageBlob) {
+            q.questionImage = URL.createObjectURL(q._imageBlob);
+          }
+          // Clean up internal fields
+          delete q._hasImage;
+          delete q._imageBlob;
+          return q;
+        });
+        resolve(questions);
+      };
+      req.onerror = (e) => reject(e.target.error);
+    });
+  } catch (e) {
+    console.error('Failed to load questions from IndexedDB:', e);
+    return [];
+  }
+}
+
+async function deleteCustomQuestion(id) {
+  try {
+    const database = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = database.transaction(DB_STORE, 'readwrite');
+      const store = tx.objectStore(DB_STORE);
+      const req = store.delete(id);
+      req.onsuccess = () => resolve();
+      req.onerror = (e) => reject(e.target.error);
+    });
+  } catch (e) {
+    console.error('Failed to delete question from IndexedDB:', e);
+  }
+}
+
+async function clearAllCustomQuestions() {
+  try {
+    const database = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = database.transaction(DB_STORE, 'readwrite');
+      const store = tx.objectStore(DB_STORE);
+      const req = store.clear();
+      req.onsuccess = () => resolve();
+      req.onerror = (e) => reject(e.target.error);
+    });
+  } catch (e) {
+    console.error('Failed to clear IndexedDB:', e);
+  }
+}
+
+function dataURLtoBlob(dataURL) {
+  const parts = dataURL.split(',');
+  const mime = parts[0].match(/:(.*?);/)[1];
+  const binary = atob(parts[1]);
+  const array = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    array[i] = binary.charCodeAt(i);
+  }
+  return new Blob([array], { type: mime });
+}
+
 // ========== Question History (localStorage) ==========
 const HISTORY_KEY = 'quiz_question_history';
 
@@ -147,6 +266,16 @@ function handleResetHistory() {
   renderQuestion();
 }
 
+function handleClearCustomQuestions() {
+  const customCount = allQuestions.filter(q => q._custom).length;
+  if (customCount === 0) { alert('没有自定义题目需要清除'); return; }
+  if (!confirm(`确定要清除 ${customCount} 道自定义题目吗？此操作不可撤销。`)) return;
+  clearAllCustomQuestions().then(() => {
+    init();
+    alert(`已清除 ${customCount} 道自定义题目`);
+  });
+}
+
 function resetAdminStats() {
   if (!confirm('确定要重置所有统计数据吗？此操作不可撤销。')) return;
   saveAdminStats({ totalVisits: 0, totalAnswers: 0, todayVisits: 0, todayAnswers: 0, lastDate: '' });
@@ -279,6 +408,17 @@ async function init() {
     allQuestions = (await resp.json()).questions;
   } catch {
     allQuestions = [];
+  }
+
+  // Load persisted custom questions and merge
+  const customQs = await loadAllCustomQuestions();
+  if (customQs.length > 0) {
+    const baseIds = new Set(allQuestions.map(q => q.id));
+    customQs.forEach(q => {
+      if (!baseIds.has(q.id)) {
+        allQuestions.push(q);
+      }
+    });
   }
 
   filteredQuestions = [...allQuestions];
@@ -619,13 +759,19 @@ function confirmUpload() {
 
   if (mode === 'replace') {
     allQuestions = pendingData.questions;
+    // Mark all as base questions (not custom)
+    allQuestions.forEach(q => delete q._custom);
   } else {
     const maxId = allQuestions.reduce((max, q) => Math.max(max, q.id || 0), 0);
     const newQuestions = pendingData.questions.map((q, i) => ({
       ...q,
-      id: maxId + i + 1
+      id: maxId + i + 1,
+      _custom: true,
+      createdAt: new Date().toISOString()
     }));
     allQuestions = [...allQuestions, ...newQuestions];
+    // Save each to IndexedDB
+    newQuestions.forEach(q => saveCustomQuestion(q));
   }
 
   userAnswers = {};
@@ -762,7 +908,6 @@ function showPhotoPreview(imageSrc) {
   document.getElementById('photoStep2').style.display = '';
   document.getElementById('photoPreviewImg').src = imageSrc;
   document.getElementById('photoPreviewContainer').style.display = 'block';
-  document.getElementById('photoNextBtn').style.display = 'none';
   document.getElementById('photoAddBtn').style.display = '';
 }
 
@@ -788,10 +933,13 @@ function photoAddQuestion() {
       questionImage: pendingImageData,
       options: [],
       answer: -1,
-      explanation: ''
+      explanation: '',
+      _custom: true,
+      createdAt: new Date().toISOString()
     };
 
     allQuestions.push(newQuestion);
+    saveCustomQuestion(newQuestion);
   } else {
     // Text-based question
     const question = document.getElementById('photoQuestion').value.trim();
@@ -811,10 +959,13 @@ function photoAddQuestion() {
       question: question,
       options: [optA, optB, optC, optD],
       answer: parseInt(document.getElementById('photoAnswer').value),
-      explanation: document.getElementById('photoExplanation').value.trim()
+      explanation: document.getElementById('photoExplanation').value.trim(),
+      _custom: true,
+      createdAt: new Date().toISOString()
     };
 
     allQuestions.push(newQuestion);
+    saveCustomQuestion(newQuestion);
   }
   userAnswers = {};
   currentIndex = 0;
