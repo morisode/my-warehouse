@@ -10,6 +10,35 @@ let photoStep = 1;
 let cameraStream = null;
 let bgCameraStream = null;
 
+// ========== Question History (localStorage) ==========
+const HISTORY_KEY = 'quiz_question_history';
+
+function getQuestionHistory() {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch { return {}; }
+}
+
+function saveQuestionHistory(history) {
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+}
+
+function recordQuestionAttempt(questionId, isCorrect) {
+  const history = getQuestionHistory();
+  if (!history[questionId]) {
+    history[questionId] = { total: 0, correct: 0 };
+  }
+  history[questionId].total++;
+  if (isCorrect) history[questionId].correct++;
+  saveQuestionHistory(history);
+}
+
+function getQuestionAttemptInfo(questionId) {
+  const history = getQuestionHistory();
+  return history[questionId] || { total: 0, correct: 0 };
+}
+
 // ========== KaTeX Helper ==========
 function renderLatexInElement(el) {
   if (window.renderMathInElement) {
@@ -299,10 +328,20 @@ function renderQuestion() {
 
   const diffMap = { '基础': 1, '中等': 2, '较难': 3 };
   const diffColors = { 1: 'diff-easy', 2: 'diff-medium', 3: 'diff-hard' };
+
+  // Build attempt info tag
+  const attemptInfo = getQuestionAttemptInfo(q.id);
+  let attemptsTag = '';
+  if (attemptInfo.total > 0) {
+    const correctRate = Math.round((attemptInfo.correct / attemptInfo.total) * 100);
+    attemptsTag = `<span class="q-tag tag-attempts">已做 ${attemptInfo.total} 次 · 正确率 ${correctRate}%</span>`;
+  }
+
   const metaHTML = `
     <span class="q-tag tag-category">${escapeHtml(q.category)}</span>
     <span class="q-tag tag-sub">${escapeHtml(q.subCategory)}</span>
     <span class="q-tag ${diffColors[diffMap[q.difficulty] || 1]}">${escapeHtml(q.difficulty)}</span>
+    ${attemptsTag}
   `;
   document.getElementById('questionMeta').innerHTML = metaHTML;
   document.getElementById('questionNumber').textContent = `第 ${currentIndex + 1} 题 / 共 ${total} 题`;
@@ -359,6 +398,9 @@ function selectOption(questionId, optionIndex) {
   if (userAnswers[questionId] !== undefined) return;
   userAnswers[questionId] = optionIndex;
   recordAnswer();
+  // Find the question object to check if answer is correct
+  const q = allQuestions.find(q => q.id === questionId);
+  if (q) recordQuestionAttempt(questionId, optionIndex === q.answer);
   renderQuestion();
 }
 
