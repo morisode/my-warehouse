@@ -11,8 +11,6 @@
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
     onload="renderMathInElement(document.body,{delimiters:[{left:'\\\\(',right:'\\\\)',display:false},{left:'\\\\[',right:'\\\\]',display:true}]});"></script>
-  <!-- Tesseract.js -->
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -200,7 +198,7 @@
         </button>
       </div>
       <div class="modal-body">
-        <!-- Step 1 -->
+        <!-- Step 1: Choose source -->
         <div id="photoStep1">
           <div class="photo-actions">
             <button class="photo-action-btn" onclick="startCamera()">
@@ -222,82 +220,42 @@
           </div>
         </div>
 
-        <!-- Step 2 -->
+        <!-- Step 2: Preview + fill info -->
         <div id="photoStep2" style="display:none">
-          <div class="ocr-preview">
-            <img id="ocrPreviewImg" src="" alt="Preview">
+          <div class="photo-preview-container" id="photoPreviewContainer" style="display:none">
+            <img id="photoPreviewImg" src="" alt="Preview">
+            <button class="photo-retake-btn" onclick="retakePhoto()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              重拍/重选
+            </button>
           </div>
-          <div class="ocr-status" id="ocrStatus">
-            <div class="spinner"></div>
-            <span>正在识别文字...</span>
-          </div>
-          <div class="ocr-result" id="ocrResultBox" style="display:none">
-            <label class="field-label">识别结果（请校对并编辑）：</label>
-            <textarea id="ocrText" rows="8" placeholder="识别到的文字内容将显示在此处..."></textarea>
-          </div>
-        </div>
-
-        <!-- Step 3 -->
-        <div id="photoStep3" style="display:none">
-          <div class="form-group">
-            <label>学科分类</label>
-            <select id="photoCategory">
-              <option value="高等数学">高等数学</option>
-              <option value="线性代数">线性代数</option>
-              <option value="概率论与数理统计">概率论与数理统计</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>子分类</label>
-            <input type="text" id="photoSubCategory" placeholder="如：极限与连续、行列式、随机事件与概率">
-          </div>
-          <div class="form-group">
-            <label>难度</label>
-            <select id="photoDifficulty">
-              <option value="基础">基础</option>
-              <option value="中等">中等</option>
-              <option value="较难">较难</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>题目内容</label>
-            <textarea id="photoQuestion" rows="4" placeholder="请输入题目（支持 LaTeX，如 \(x^2\)）"></textarea>
-          </div>
-          <div class="form-group">
-            <label>选项 A</label>
-            <input type="text" id="photoOptA" placeholder="选项 A">
-          </div>
-          <div class="form-group">
-            <label>选项 B</label>
-            <input type="text" id="photoOptB" placeholder="选项 B">
-          </div>
-          <div class="form-group">
-            <label>选项 C</label>
-            <input type="text" id="photoOptC" placeholder="选项 C">
-          </div>
-          <div class="form-group">
-            <label>选项 D</label>
-            <input type="text" id="photoOptD" placeholder="选项 D">
-          </div>
-          <div class="form-group">
-            <label>正确答案</label>
-            <select id="photoAnswer">
-              <option value="0">A</option>
-              <option value="1">B</option>
-              <option value="2">C</option>
-              <option value="3">D</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>解析（可选）</label>
-            <textarea id="photoExplanation" rows="3" placeholder="答案解析说明"></textarea>
+          <div class="photo-add-form">
+            <p class="form-hint">照片将作为题目直接显示，无需手动输入内容</p>
+            <div class="form-group">
+              <label>学科分类</label>
+              <select id="photoCategory">
+                <option value="高等数学">高等数学</option>
+                <option value="线性代数">线性代数</option>
+                <option value="概率论与数理统计">概率论与数理统计</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>子分类</label>
+              <input type="text" id="photoSubCategory" placeholder="如：极限与连续、行列式、随机事件与概率">
+            </div>
+            <div class="form-group">
+              <label>难度</label>
+              <select id="photoDifficulty">
+                <option value="基础">基础</option>
+                <option value="中等">中等</option>
+                <option value="较难">较难</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="photoBackBtn" onclick="photoBack()" style="display:none">返回</button>
         <button class="btn btn-secondary" onclick="closePhotoModal()">取消</button>
-        <button class="btn btn-primary" id="photoNextBtn" onclick="photoNext()" style="display:none">下一步</button>
         <button class="btn btn-primary" id="photoAddBtn" onclick="photoAddQuestion()" style="display:none">添加题目</button>
       </div>
     </div>
@@ -425,7 +383,7 @@
   <footer class="app-footer">
     <span>考研数学题库 &copy; 2026</span>
     <span class="footer-sep">|</span>
-    <span>LaTeX by KaTeX &middot; OCR by Tesseract.js</span>
+    <span>LaTeX by KaTeX</span>
   </footer>
 
   <script src="script.js"></script>
