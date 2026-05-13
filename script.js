@@ -2,10 +2,31 @@
 let allQuestions = [];
 let filteredQuestions = [];
 let currentIndex = 0;
-let userAnswers = {};  // { questionId: selectedOptionIndex }
+let userAnswers = {};
 let currentFilter = 'all';
-let pendingFile = null;  // file selected but not yet uploaded
-let pendingData = null;  // parsed JSON data
+let pendingFile = null;
+let pendingData = null;
+let photoStep = 1;
+let cameraStream = null;
+
+// ========== KaTeX Helper ==========
+function renderLatexInElement(el) {
+  if (window.renderMathInElement) {
+    renderMathInElement(el, {
+      delimiters: [
+        { left: '\\(', right: '\\)', display: false },
+        { left: '\\[', right: '\\]', display: true }
+      ],
+      throwOnError: false
+    });
+  }
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
 
 // ========== Init ==========
 async function init() {
@@ -72,7 +93,7 @@ function rebuildFilterButtons() {
   bar.innerHTML = '<button class="filter-btn active" data-filter="all">全部</button>';
   categories.forEach(cat => {
     const display = displayMap[cat] || cat;
-    bar.innerHTML += `<button class="filter-btn" data-filter="${cat}">${display}</button>`;
+    bar.innerHTML += `<button class="filter-btn" data-filter="${cat}">${escapeHtml(display)}</button>`;
   });
   setupFilters();
 }
@@ -90,11 +111,9 @@ function renderQuestion() {
   const q = filteredQuestions[currentIndex];
   const total = filteredQuestions.length;
 
-  // Progress
   document.getElementById('statProgress').textContent = `${currentIndex + 1}/${total}`;
   document.getElementById('progressFill').style.width = `${((currentIndex + 1) / total) * 100}%`;
 
-  // Stats
   let correctCount = 0, wrongCount = 0;
   filteredQuestions.forEach(fq => {
     const ans = userAnswers[fq.id];
@@ -109,20 +128,18 @@ function renderQuestion() {
   document.getElementById('statRate').textContent =
     totalAnswered > 0 ? `${Math.round((correctCount / totalAnswered) * 100)}%` : '-';
 
-  // Meta tags
   const diffMap = { '基础': 1, '中等': 2, '较难': 3 };
   const metaHTML = `
-    <span class="tag category">${q.category}</span>
-    <span class="tag sub-category">${q.subCategory}</span>
-    <span class="tag difficulty-${diffMap[q.difficulty] || 1}">${q.difficulty}</span>
+    <span class="tag category">${escapeHtml(q.category)}</span>
+    <span class="tag sub-category">${escapeHtml(q.subCategory)}</span>
+    <span class="tag difficulty-${diffMap[q.difficulty] || 1}">${escapeHtml(q.difficulty)}</span>
   `;
   document.getElementById('questionMeta').innerHTML = metaHTML;
   document.getElementById('questionNumber').textContent = `第 ${currentIndex + 1} 题 / 共 ${total} 题`;
 
-  // Question text
+  // Set content (HTML with LaTeX)
   document.getElementById('questionText').innerHTML = q.question;
 
-  // Options
   const letters = ['A', 'B', 'C', 'D'];
   const isAnswered = userAnswers[q.id] !== undefined;
   const optionsHTML = q.options.map((opt, i) => {
@@ -141,16 +158,15 @@ function renderQuestion() {
   }).join('');
   document.getElementById('optionsList').innerHTML = optionsHTML;
 
-  // Explanation
+  // Explanation (also supports LaTeX)
   const expBox = document.getElementById('explanationBox');
   if (isAnswered) {
-    document.getElementById('explanationText').textContent = q.explanation;
+    document.getElementById('explanationText').innerHTML = q.explanation || '';
     expBox.classList.add('show');
   } else {
     expBox.classList.remove('show');
   }
 
-  // Nav buttons
   document.getElementById('prevBtn').disabled = currentIndex === 0;
   const nextBtn = document.getElementById('nextBtn');
   if (currentIndex === total - 1) {
@@ -161,10 +177,9 @@ function renderQuestion() {
     nextBtn.className = 'nav-btn next';
   }
 
-  // Re-render MathJax
-  if (window.MathJax && MathJax.typesetPromise) {
-    MathJax.typesetPromise([document.getElementById('questionArea')]).catch(() => {});
-  }
+  // Render LaTeX with KaTeX
+  const questionArea = document.getElementById('questionArea');
+  renderLatexInElement(questionArea);
 }
 
 // ========== Interactions ==========
@@ -266,7 +281,6 @@ function processFile(file) {
   document.getElementById('fileInfo').style.display = 'flex';
   document.getElementById('dropZone').style.display = 'none';
 
-  // Pre-parse to validate
   const reader = new FileReader();
   reader.onload = function(e) {
     try {
@@ -305,11 +319,10 @@ function confirmUpload() {
   if (mode === 'replace') {
     allQuestions = pendingData.questions;
   } else {
-    // Append: assign new IDs to avoid collisions
     const maxId = allQuestions.reduce((max, q) => Math.max(max, q.id || 0), 0);
     const newQuestions = pendingData.questions.map((q, i) => ({
       ...q,
-      id: q.id !== undefined ? maxId + i + 1 : maxId + i + 1
+      id: maxId + i + 1
     }));
     allQuestions = [...allQuestions, ...newQuestions];
   }
@@ -318,7 +331,6 @@ function confirmUpload() {
   currentIndex = 0;
   filteredQuestions = [...allQuestions];
 
-  // Rebuild UI
   rebuildFilterButtons();
   updateToolbarInfo();
   document.getElementById('quizCard').style.display = '';
@@ -334,16 +346,8 @@ function confirmUpload() {
 // ========== Drag & Drop ==========
 function setupDragDrop() {
   const dropZone = document.getElementById('dropZone');
-
-  dropZone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    dropZone.classList.add('dragover');
-  });
-
-  dropZone.addEventListener('dragleave', () => {
-    dropZone.classList.remove('dragover');
-  });
-
+  dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('dragover'); });
   dropZone.addEventListener('drop', (e) => {
     e.preventDefault();
     dropZone.classList.remove('dragover');
@@ -379,7 +383,6 @@ function downloadTemplate() {
       }
     ]
   };
-
   const blob = new Blob([JSON.stringify(template, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -389,11 +392,178 @@ function downloadTemplate() {
   URL.revokeObjectURL(url);
 }
 
+// ========== Photo Modal ==========
+function openPhotoModal() {
+  photoStep = 1;
+  resetPhotoModalUI();
+  document.getElementById('photoModal').classList.add('show');
+}
+
+function closePhotoModal() {
+  stopCamera();
+  document.getElementById('photoModal').classList.remove('show');
+}
+
+function resetPhotoModalUI() {
+  document.getElementById('photoStep1').style.display = '';
+  document.getElementById('photoStep2').style.display = 'none';
+  document.getElementById('photoStep3').style.display = 'none';
+  document.getElementById('cameraPreview').style.display = 'none';
+  document.getElementById('ocrStatus').style.display = 'flex';
+  document.getElementById('ocrResultBox').style.display = 'none';
+  document.getElementById('photoBackBtn').style.display = 'none';
+  document.getElementById('photoNextBtn').style.display = 'none';
+  document.getElementById('photoAddBtn').style.display = 'none';
+}
+
+// --- Camera ---
+async function startCamera() {
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
+    const video = document.getElementById('cameraVideo');
+    video.srcObject = cameraStream;
+    document.getElementById('cameraPreview').style.display = 'block';
+  } catch (err) {
+    alert('无法访问摄像头：' + err.message);
+  }
+}
+
+function stopCamera() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = null;
+  }
+  document.getElementById('cameraVideo').srcObject = null;
+  document.getElementById('cameraPreview').style.display = 'none';
+}
+
+function capturePhoto() {
+  const video = document.getElementById('cameraVideo');
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  const dataUrl = canvas.toDataURL('image/png');
+  stopCamera();
+  processImageForOCR(dataUrl);
+}
+
+function handlePhotoSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => processImageForOCR(e.target.result);
+  reader.readAsDataURL(file);
+  event.target.value = ''; // reset
+}
+
+// --- OCR ---
+async function processImageForOCR(imageSrc) {
+  document.getElementById('photoStep1').style.display = 'none';
+  document.getElementById('photoStep2').style.display = '';
+  document.getElementById('ocrPreviewImg').src = imageSrc;
+  document.getElementById('ocrStatus').style.display = 'flex';
+  document.getElementById('ocrResultBox').style.display = 'none';
+  document.getElementById('photoNextBtn').style.display = 'none';
+
+  try {
+    const result = await Tesseract.recognize(imageSrc, 'chi_sim+eng', {
+      logger: m => {
+        if (m.status === 'recognizing text') {
+          const pct = Math.round((m.progress || 0) * 100);
+          document.querySelector('#ocrStatus span').textContent = `正在识别文字... ${pct}%`;
+        }
+      }
+    });
+
+    const text = result.data.text.trim();
+    document.getElementById('ocrText').value = text;
+    document.getElementById('ocrStatus').style.display = 'none';
+    document.getElementById('ocrResultBox').style.display = 'block';
+    document.getElementById('photoNextBtn').style.display = '';
+  } catch (err) {
+    document.getElementById('ocrStatus').style.display = 'none';
+    document.getElementById('ocrResultBox').style.display = 'block';
+    document.getElementById('ocrText').value = 'OCR 识别失败，请手动输入题目内容。\n错误：' + err.message;
+    document.getElementById('photoNextBtn').style.display = '';
+  }
+}
+
+// --- Photo Step Navigation ---
+function photoNext() {
+  if (photoStep === 1) return; // should not happen
+  if (photoStep === 2) {
+    // Go to step 3: edit form
+    photoStep = 3;
+    document.getElementById('photoStep2').style.display = 'none';
+    document.getElementById('photoStep3').style.display = '';
+    document.getElementById('photoNextBtn').style.display = 'none';
+    document.getElementById('photoBackBtn').style.display = '';
+    document.getElementById('photoAddBtn').style.display = '';
+  }
+}
+
+function photoBack() {
+  if (photoStep === 3) {
+    photoStep = 2;
+    document.getElementById('photoStep3').style.display = 'none';
+    document.getElementById('photoStep2').style.display = '';
+    document.getElementById('photoAddBtn').style.display = 'none';
+    document.getElementById('photoBackBtn').style.display = 'none';
+    document.getElementById('photoNextBtn').style.display = '';
+  }
+}
+
+function photoAddQuestion() {
+  const question = document.getElementById('photoQuestion').value.trim();
+  const optA = document.getElementById('photoOptA').value.trim();
+  const optB = document.getElementById('photoOptB').value.trim();
+  const optC = document.getElementById('photoOptC').value.trim();
+  const optD = document.getElementById('photoOptD').value.trim();
+
+  if (!question) { alert('请输入题目内容'); return; }
+  if (!optA || !optB || !optC || !optD) { alert('请填写全部四个选项'); return; }
+
+  const maxId = allQuestions.reduce((max, q) => Math.max(max, q.id || 0), 0);
+  const newQuestion = {
+    id: maxId + 1,
+    category: document.getElementById('photoCategory').value,
+    subCategory: document.getElementById('photoSubCategory').value.trim() || '未分类',
+    difficulty: document.getElementById('photoDifficulty').value,
+    question: question,
+    options: [optA, optB, optC, optD],
+    answer: parseInt(document.getElementById('photoAnswer').value),
+    explanation: document.getElementById('photoExplanation').value.trim()
+  };
+
+  allQuestions.push(newQuestion);
+  userAnswers = {};
+  currentIndex = 0;
+  filteredQuestions = [...allQuestions];
+
+  rebuildFilterButtons();
+  updateToolbarInfo();
+  document.getElementById('quizCard').style.display = '';
+  document.getElementById('emptyState').style.display = 'none';
+  renderQuestion();
+  closePhotoModal();
+
+  alert('题目添加成功！');
+}
+
 // ========== Keyboard Navigation ==========
 document.addEventListener('keydown', (e) => {
-  // Don't capture keys when modal is open
-  if (document.getElementById('uploadModal').classList.contains('show')) {
-    if (e.key === 'Escape') closeUploadModal();
+  // Don't capture keys when any modal is open
+  const anyModalOpen =
+    document.getElementById('uploadModal').classList.contains('show') ||
+    document.getElementById('photoModal').classList.contains('show');
+  if (anyModalOpen) {
+    if (e.key === 'Escape') {
+      closeUploadModal();
+      closePhotoModal();
+    }
     return;
   }
 
