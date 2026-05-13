@@ -4,6 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>考研数学题库</title>
+  <!-- KaTeX: faster & reliable LaTeX rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'\\\\(',right:'\\\\)',display:false},{left:'\\\\[',right:'\\\\]',display:true}]});"></script>
+  <!-- Tesseract.js: OCR engine for photo-to-text -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,13 +18,16 @@
   <!-- Header -->
   <header class="app-header">
     <h1>考研数学题库</h1>
-    <p>选择题练习 · 支持上传自定义题目</p>
+    <p>选择题练习 · 支持上传 & 拍照添加题目</p>
   </header>
 
-  <!-- Toolbar (Upload + Reset) -->
+  <!-- Toolbar -->
   <div class="toolbar">
     <button class="toolbar-btn upload-trigger" onclick="openUploadModal()">
       <span>&#128228;</span> 上传题目
+    </button>
+    <button class="toolbar-btn camera-trigger" onclick="openPhotoModal()">
+      <span>&#128247;</span> 拍照添加
     </button>
     <button class="toolbar-btn reset-trigger" onclick="resetQuiz()">
       <span>&#128260;</span> 重置答题
@@ -82,7 +92,7 @@
   <div class="empty-state" id="emptyState" style="display:none">
     <div class="empty-icon">&#128218;</div>
     <h3>题库为空</h3>
-    <p>点击上方「上传题目」按钮，加载 JSON 格式的题目文件开始练习</p>
+    <p>点击上方「上传题目」或「拍照添加」开始使用</p>
   </div>
 
   <!-- Upload Modal -->
@@ -92,48 +102,150 @@
         <h2>上传题目</h2>
         <button class="modal-close" onclick="closeUploadModal()">&times;</button>
       </div>
-
       <div class="modal-body">
-        <!-- Upload mode -->
         <div class="upload-mode">
           <label class="radio-label">
             <input type="radio" name="uploadMode" value="replace" checked>
             <span>替换题库</span>
-            <small>清除现有题目，使用上传的题目</small>
+            <small>清除现有题目</small>
           </label>
           <label class="radio-label">
             <input type="radio" name="uploadMode" value="append">
             <span>追加题目</span>
-            <small>在现有题目基础上添加新题目</small>
+            <small>保留现有题目</small>
           </label>
         </div>
-
-        <!-- Drop zone -->
         <div class="drop-zone" id="dropZone">
           <div class="drop-zone-icon">&#128194;</div>
           <div class="drop-zone-text">拖拽 JSON 文件到此处</div>
           <div class="drop-zone-hint">或点击下方按钮选择文件</div>
-          <label class="upload-btn" for="fileInput">
-            选择文件
-          </label>
+          <label class="upload-btn" for="fileInput">选择文件</label>
           <input type="file" id="fileInput" accept=".json" style="display:none" onchange="handleFileSelect(event)">
         </div>
-
         <div class="file-info" id="fileInfo" style="display:none">
           <span class="file-info-icon">&#128196;</span>
           <span class="file-info-name" id="fileName"></span>
           <button class="file-info-remove" onclick="clearFile()">&times;</button>
         </div>
-
-        <!-- Template download -->
         <div class="template-section">
           <p>不知道格式？<a href="javascript:void(0)" onclick="downloadTemplate()">下载题目模板</a></p>
         </div>
       </div>
-
       <div class="modal-footer">
         <button class="modal-btn cancel" onclick="closeUploadModal()">取消</button>
         <button class="modal-btn confirm" id="confirmUploadBtn" onclick="confirmUpload()" disabled>确认上传</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Photo Add Modal -->
+  <div class="modal-overlay" id="photoModal">
+    <div class="modal-card modal-card-wide">
+      <div class="modal-header">
+        <h2>拍照添加题目</h2>
+        <button class="modal-close" onclick="closePhotoModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Step 1: Take / Select Photo -->
+        <div id="photoStep1">
+          <div class="photo-actions">
+            <button class="photo-action-btn" onclick="startCamera()">
+              <span class="photo-action-icon">&#128247;</span>
+              <span class="photo-action-text">拍照</span>
+            </button>
+            <button class="photo-action-btn" onclick="document.getElementById('photoFileInput').click()">
+              <span class="photo-action-icon">&#128206;</span>
+              <span class="photo-action-text">从相册选择</span>
+            </button>
+            <input type="file" id="photoFileInput" accept="image/*" style="display:none" onchange="handlePhotoSelect(event)">
+          </div>
+          <!-- Camera preview -->
+          <div class="camera-preview" id="cameraPreview" style="display:none">
+            <video id="cameraVideo" autoplay playsinline></video>
+            <div class="camera-controls">
+              <button class="camera-btn capture" onclick="capturePhoto()">&#128248; 拍照</button>
+              <button class="camera-btn cancel-cam" onclick="stopCamera()">&#10005; 取消</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Preview & OCR -->
+        <div id="photoStep2" style="display:none">
+          <div class="ocr-preview">
+            <img id="ocrPreviewImg" src="" alt="Preview">
+          </div>
+          <div class="ocr-status" id="ocrStatus">
+            <div class="ocr-spinner"></div>
+            <span>正在识别文字...</span>
+          </div>
+          <div class="ocr-result" id="ocrResultBox" style="display:none">
+            <label class="ocr-label">识别结果（请校对并编辑）：</label>
+            <textarea id="ocrText" rows="8" placeholder="识别到的文字内容将显示在此处..."></textarea>
+          </div>
+        </div>
+
+        <!-- Step 3: Edit Question -->
+        <div id="photoStep3" style="display:none">
+          <div class="form-group">
+            <label>学科分类</label>
+            <select id="photoCategory">
+              <option value="高等数学">高等数学</option>
+              <option value="线性代数">线性代数</option>
+              <option value="概率论与数理统计">概率论与数理统计</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>子分类</label>
+            <input type="text" id="photoSubCategory" placeholder="如：极限与连续、行列式、随机事件与概率">
+          </div>
+          <div class="form-group">
+            <label>难度</label>
+            <select id="photoDifficulty">
+              <option value="基础">基础</option>
+              <option value="中等">中等</option>
+              <option value="较难">较难</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>题目内容</label>
+            <textarea id="photoQuestion" rows="4" placeholder="请输入题目（支持 LaTeX，如 \\(x^2\\)）"></textarea>
+          </div>
+          <div class="form-group">
+            <label>选项 A</label>
+            <input type="text" id="photoOptA" placeholder="选项 A">
+          </div>
+          <div class="form-group">
+            <label>选项 B</label>
+            <input type="text" id="photoOptB" placeholder="选项 B">
+          </div>
+          <div class="form-group">
+            <label>选项 C</label>
+            <input type="text" id="photoOptC" placeholder="选项 C">
+          </div>
+          <div class="form-group">
+            <label>选项 D</label>
+            <input type="text" id="photoOptD" placeholder="选项 D">
+          </div>
+          <div class="form-group">
+            <label>正确答案</label>
+            <select id="photoAnswer">
+              <option value="0">A</option>
+              <option value="1">B</option>
+              <option value="2">C</option>
+              <option value="3">D</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>解析（可选）</label>
+            <textarea id="photoExplanation" rows="3" placeholder="答案解析说明"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn cancel" id="photoBackBtn" onclick="photoBack()" style="display:none">返回</button>
+        <button class="modal-btn cancel" onclick="closePhotoModal()">取消</button>
+        <button class="modal-btn confirm" id="photoNextBtn" onclick="photoNext()" style="display:none">下一步</button>
+        <button class="modal-btn confirm" id="photoAddBtn" onclick="photoAddQuestion()" style="display:none">添加题目</button>
       </div>
     </div>
   </div>
@@ -150,10 +262,9 @@
   </div>
 
   <footer class="app-footer">
-    考研数学题库 &copy; 2026 &middot; 支持自定义题目上传
+    考研数学题库 &copy; 2026 &middot; LaTeX by KaTeX &middot; OCR by Tesseract.js
   </footer>
 
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
