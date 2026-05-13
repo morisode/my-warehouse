@@ -39,6 +39,31 @@ function getQuestionAttemptInfo(questionId) {
   return history[questionId] || { total: 0, correct: 0 };
 }
 
+// Get total stats across all questions
+function getOverallAttemptStats() {
+  const history = getQuestionHistory();
+  let totalAttempts = 0;
+  let totalCorrect = 0;
+  let questionCount = Object.keys(history).length;
+  for (const id in history) {
+    totalAttempts += history[id].total;
+    totalCorrect += history[id].correct;
+  }
+  return { totalAttempts, totalCorrect, questionCount };
+}
+
+// Reset history for a specific question
+function resetQuestionHistory(questionId) {
+  const history = getQuestionHistory();
+  delete history[questionId];
+  saveQuestionHistory(history);
+}
+
+// Reset all question history
+function resetAllQuestionHistory() {
+  localStorage.removeItem(HISTORY_KEY);
+}
+
 // ========== KaTeX Helper ==========
 function renderLatexInElement(el) {
   if (window.renderMathInElement) {
@@ -104,6 +129,21 @@ function updateAdminPanel() {
   document.getElementById('adminTotalAnswers').textContent = stats.totalAnswers;
   document.getElementById('adminTodayVisits').textContent = isToday ? stats.todayVisits : 0;
   document.getElementById('adminTodayAnswers').textContent = isToday ? stats.todayAnswers : 0;
+
+  // Update history stats
+  const histStats = getOverallAttemptStats();
+  document.getElementById('adminHistQuestions').textContent = histStats.questionCount;
+  document.getElementById('adminHistAttempts').textContent = histStats.totalAttempts;
+  document.getElementById('adminHistCorrect').textContent = histStats.totalCorrect;
+  document.getElementById('adminHistRate').textContent =
+    histStats.totalAttempts > 0 ? `${Math.round((histStats.totalCorrect / histStats.totalAttempts) * 100)}%` : '-';
+}
+
+function handleResetHistory() {
+  if (!confirm('确定要清空所有做题历史记录吗？此操作不可撤销。')) return;
+  resetAllQuestionHistory();
+  updateAdminPanel();
+  renderQuestion();
 }
 
 function resetAdminStats() {
@@ -334,7 +374,11 @@ function renderQuestion() {
   let attemptsTag = '';
   if (attemptInfo.total > 0) {
     const correctRate = Math.round((attemptInfo.correct / attemptInfo.total) * 100);
-    attemptsTag = `<span class="q-tag tag-attempts">已做 ${attemptInfo.total} 次 · 正确率 ${correctRate}%</span>`;
+    let statusIcon = '📝';
+    if (correctRate >= 80) statusIcon = '✅';
+    else if (correctRate >= 50) statusIcon = '🔄';
+    else statusIcon = '⚠️';
+    attemptsTag = `<span class="q-tag tag-attempts">${statusIcon} 已做 ${attemptInfo.total} 次 · 正确 ${attemptInfo.correct} · 正确率 ${correctRate}%</span>`;
   }
 
   const metaHTML = `
@@ -452,8 +496,16 @@ function showResult() {
   document.getElementById('resultIcon').textContent = icon;
   document.getElementById('resultTitle').textContent = title;
   document.getElementById('resultScore').textContent = `${rate}%`;
-  document.getElementById('resultDetail').textContent =
-    `答对 ${correct} 题 / 答错 ${wrong} 题 / 未答 ${unanswered} 题`;
+
+  // Build detail with history info
+  let detailText = `答对 ${correct} 题 / 答错 ${wrong} 题 / 未答 ${unanswered} 题`;
+  const histStats = getOverallAttemptStats();
+  if (histStats.totalAttempts > 0) {
+    const histRate = Math.round((histStats.totalCorrect / histStats.totalAttempts) * 100);
+    detailText += `\n累计做题 ${histStats.totalAttempts} 次 · 历史正确率 ${histRate}%`;
+  }
+  document.getElementById('resultDetail').textContent = detailText;
+  document.getElementById('resultDetail').style.whiteSpace = 'pre-line';
   document.getElementById('resultOverlay').classList.add('show');
 }
 
