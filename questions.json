@@ -1,0 +1,105 @@
+{
+  "title": "考研数学题库",
+  "questions": [
+    {
+      "id": 1,
+      "category": "高等数学",
+      "subCategory": "极限与连续",
+      "difficulty": "基础",
+      "question": "求极限 \\(\\lim_{x \\to 0} \\frac{\\sin x}{x}\\)",
+      "options": ["0", "1", "\\infty", "不存在"],
+      "answer": 1,
+      "explanation": "这是第一个重要极限。当 \\(x \\to 0\\) 时，\\(\\sin x \\sim x\\)，因此 \\(\\frac{\\sin x}{x} \\to 1\\)。也可通过洛必达法则验证：\\(\\lim_{x \\to 0} \\frac{\\cos x}{1} = 1\\)。"
+    },
+    {
+      "id": 2,
+      "category": "高等数学",
+      "subCategory": "导数与微分",
+      "difficulty": "基础",
+      "question": "函数 \\(f(x) = e^{3x}\\) 的导数 \\(f'(x) =\\) ?",
+      "options": ["\\(e^{3x}\\)", "\\(3e^{3x}\\)", "\\(3x e^{3x}\\)", "\\(e^{3x}/3\\)"],
+      "answer": 1,
+      "explanation": "由复合函数求导法则（链式法则）：\\(f'(x) = e^{3x} \\cdot (3x)' = 3e^{3x}\\)。"
+    },
+    {
+      "id": 3,
+      "category": "高等数学",
+      "subCategory": "积分",
+      "difficulty": "中等",
+      "question": "不定积分 \\(\\int x e^{x} \\, dx =\\) ?",
+      "options": ["\\(x e^{x} - e^{x} + C\\)", "\\(x e^{x} + C\\)", "\\(\\frac{x^2}{2} e^{x} + C\\)", "\\((x-1)e^{x} + C\\)"],
+      "answer": 0,
+      "explanation": "使用分部积分法：令 \\(u = x\\), \\(dv = e^{x}dx\\)，则 \\(du = dx\\), \\(v = e^{x}\\)。\n\\(\\int x e^{x} dx = x e^{x} - \\int e^{x} dx = x e^{x} - e^{x} + C = (x-1)e^{x} + C\\)。"
+    },
+    {
+      "id": 4,
+      "category": "线性代数",
+      "subCategory": "行列式",
+      "difficulty": "基础",
+      "question": "二阶行列式 \\(\\begin{vmatrix} a & b \\\\ c & d \\end{vmatrix}\\) 的值为？",
+      "options": ["\\(ab - cd\\)", "\\(ac - bd\\)", "\\(ad - bc\\)", "\\(ad + bc\\)"],
+      "answer": 2,
+      "explanation": "二阶行列式的计算公式为：主对角线元素之积减去副对角线元素之积，即 \\(ad - bc\\)。"
+    },
+    {
+      "id": 5,
+      "category": "线性代数",
+      "subCategory": "矩阵",
+      "difficulty": "中等",
+      "question": "设 \\(A\\) 为 3 阶方阵，\\(|A| = 2\\)，则 \\(|2A| =\\) ?",
+      "options": ["4", "8", "16", "6"],
+      "answer": 2,
+      "explanation": "对于 n 阶方阵 A 和标量 k，有 \\(|kA| = k^n |A|\\)。\n此处 \\(n = 3\\), \\(k = 2\\)，所以 \\(|2A| = 2^3 \\times 2 = 16\\)。"
+    },
+    {
+      "id": 6,
+      "category": "概率论与数理统计",
+      "subCategory": "随机事件与概率",
+      "difficulty": "基础",
+      "question": "抛两枚硬币，至少一枚正面朝上的概率是？",
+      "options": ["\\(\\frac{1}{4}\\)", "\\(\\frac{1}{2}\\)", "\\(\\frac{3}{4}\\)", "1"],
+      "answer": 2,
+      "explanation": "样本空间 \\(\\Omega = \\{(正,正), (正,反), (反,正), (反,反)\\}\\)。\n至少一枚正面 = 去掉 (反,反)，共 3 个样本点。\n\\(P = \\frac{3}{4}\\)。"
+    },
+    {
+      "id": 7,
+      "category": "高等数学",
+      "subCategory": "多元函数微分学",
+      "difficulty": "中等",
+      "question": "函数 \\(f(x,y) = x^2 + y^2\\) 在点 \\((1,1)\\) 处的梯度为？",
+      "options": ["\\((1,1)\\)", "\\((2,2)\\)", "\\((1,2)\\)", "\\((2,1)\\)"],
+      "answer": 1,
+      "explanation": "\\(\\nabla f = \\left(\\frac{\\partial f}{\\partial x}, \\frac{\\partial f}{\\partial y}\\right) = (2x, 2y)\\)。\n在 \\((1,1)\\) 处，梯度为 \\((2, 2)\\)。"
+    },
+    {
+      "id": 8,
+      "category": "概率论与数理统计",
+      "subCategory": "随机变量及其分布",
+      "difficulty": "中等",
+      "question": "设 \\(X \\sim N(0,1)\\)，则 \\(P(X > 0) =\\) ?",
+      "options": ["0", "\\(\\frac{1}{2}\\)", "1", "\\(\\frac{1}{4}\\)"],
+      "answer": 1,
+      "explanation": "标准正态分布 \\(N(0,1)\\) 关于原点对称，密度函数 \\(\\varphi(x)\\) 为偶函数。\n因此 \\(P(X > 0) = P(X < 0) = \\frac{1}{2}\\)。"
+    },
+    {
+      "id": 9,
+      "category": "高等数学",
+      "subCategory": "级数",
+      "difficulty": "较难",
+      "question": "判断级数 \\(\\sum_{n=1}^{\\infty} \\frac{1}{n^2}\\) 的敛散性？",
+      "options": ["发散", "收敛", "条件收敛", "无法判断"],
+      "answer": 1,
+      "explanation": "这是 p 级数 \\(\\sum \\frac{1}{n^p}\\)，当 \\(p > 1\\) 时收敛。此处 \\(p = 2 > 1\\)，故级数收敛。\n其和为 \\(\\zeta(2) = \\frac{\\pi^2}{6}\\)（欧拉解答）。"
+    },
+    {
+      "id": 10,
+      "category": "线性代数",
+      "subCategory": "特征值与特征向量",
+      "difficulty": "较难",
+      "question": "矩阵 \\(A = \\begin{pmatrix} 2 & 1 \\\\ 0 & 2 \\end{pmatrix}\\) 的特征值为？",
+      "options": ["1 和 3", "2（二重）", "0 和 2", "1 和 2"],
+      "answer": 1,
+      "explanation": "\\(|A - \\lambda I| = \\begin{vmatrix} 2-\\lambda & 1 \\\\ 0 & 2-\\lambda \\end{vmatrix} = (2-\\lambda)^2 = 0\\)\n解得 \\(\\lambda = 2\\)（二重特征值）。这是上三角矩阵，特征值就是对角线元素。"
+    }
+  ]
+}

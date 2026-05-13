@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>考研数学题库</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="app-header">
+    <h1>考研数学题库</h1>
+    <p>选择题练习 · 支持上传自定义题目</p>
+  </header>
+
+  <!-- Stats -->
+  <div class="stats-bar">
+    <div class="stat-item">
+      <div class="stat-label">进度</div>
+      <div class="stat-value" id="statProgress">0/0</div>
+    </div>
+    <div class="stat-item correct">
+      <div class="stat-label">正确</div>
+      <div class="stat-value" id="statCorrect">0</div>
+    </div>
+    <div class="stat-item wrong">
+      <div class="stat-label">错误</div>
+      <div class="stat-value" id="statWrong">0</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">正确率</div>
+      <div class="stat-value" id="statRate">-</div>
+    </div>
+  </div>
+
+  <!-- Category Filters -->
+  <div class="filter-bar" id="filterBar">
+    <button class="filter-btn active" data-filter="all">全部</button>
+    <button class="filter-btn" data-filter="高等数学">高等数学</button>
+    <button class="filter-btn" data-filter="线性代数">线性代数</button>
+    <button class="filter-btn" data-filter="概率论与数理统计">概率统计</button>
+  </div>
+
+  <!-- Quiz Card -->
+  <div class="quiz-card" id="quizCard">
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+    </div>
+    <div class="question-area" id="questionArea">
+      <div class="question-meta" id="questionMeta"></div>
+      <div class="question-number" id="questionNumber"></div>
+      <div class="question-text" id="questionText"></div>
+      <div class="options-list" id="optionsList"></div>
+      <div class="explanation-box" id="explanationBox">
+        <div class="explanation-title">解析</div>
+        <div class="explanation-text" id="explanationText"></div>
+      </div>
+    </div>
+    <div class="nav-bar">
+      <button class="nav-btn prev" id="prevBtn" onclick="prevQuestion()">
+        <span>&#8592;</span> 上一题
+      </button>
+      <button class="nav-btn next" id="nextBtn" onclick="nextQuestion()">
+        下一题 <span>&#8594;</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Upload Area -->
+  <div class="upload-area" id="uploadArea">
+    <h3>上传自定义题目</h3>
+    <p>上传 JSON 格式题目文件，格式参考 questions.json</p>
+    <label class="upload-btn" for="fileInput">
+      &#128194; 选择文件
+    </label>
+    <input type="file" id="fileInput" accept=".json" style="display:none" onchange="loadCustomQuestions(event)">
+    <p style="margin-top: 12px; font-size: 12px; color: #9ca3af;">
+      上传后将替换当前题库
+    </p>
+  </div>
+
+  <!-- Result Overlay -->
+  <div class="result-overlay" id="resultOverlay">
+    <div class="result-card">
+      <div class="result-icon" id="resultIcon"></div>
+      <h2 id="resultTitle">练习完成</h2>
+      <div class="result-score" id="resultScore"></div>
+      <div class="result-detail" id="resultDetail"></div>
+      <button class="restart-btn" onclick="restartQuiz()">重新开始</button>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    考研数学题库 &copy; 2026 &middot; 支持自定义题目上传
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
