@@ -371,11 +371,39 @@
 
         <!-- Quick Actions -->
         <div class="admin-section">
+          <h3>做题历史</h3>
+          <p class="admin-hint">累计做题统计（存储在浏览器本地）</p>
+          <div class="admin-stats">
+            <div class="admin-stat-card">
+              <div class="admin-stat-val" id="adminHistQuestions">0</div>
+              <div class="admin-stat-label">做过题目数</div>
+            </div>
+            <div class="admin-stat-card">
+              <div class="admin-stat-val" id="adminHistAttempts">0</div>
+              <div class="admin-stat-label">总做题次数</div>
+            </div>
+            <div class="admin-stat-card">
+              <div class="admin-stat-val" id="adminHistCorrect">0</div>
+              <div class="admin-stat-label">总正确次数</div>
+            </div>
+            <div class="admin-stat-card">
+              <div class="admin-stat-val" id="adminHistRate">-</div>
+              <div class="admin-stat-label">历史正确率</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="admin-section">
           <h3>快捷操作</h3>
           <div class="admin-actions">
             <button class="btn btn-danger btn-sm" onclick="resetAdminStats()">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
               重置统计数据
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="handleResetHistory()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              清空做题历史
             </button>
           </div>
         </div>
