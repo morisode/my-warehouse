@@ -14,6 +14,17 @@
     <p>选择题练习 · 支持上传自定义题目</p>
   </header>
 
+  <!-- Toolbar (Upload + Reset) -->
+  <div class="toolbar">
+    <button class="toolbar-btn upload-trigger" onclick="openUploadModal()">
+      <span>&#128228;</span> 上传题目
+    </button>
+    <button class="toolbar-btn reset-trigger" onclick="resetQuiz()">
+      <span>&#128260;</span> 重置答题
+    </button>
+    <span class="toolbar-info" id="toolbarInfo">共 0 道题</span>
+  </div>
+
   <!-- Stats -->
   <div class="stats-bar">
     <div class="stat-item">
@@ -67,17 +78,64 @@
     </div>
   </div>
 
-  <!-- Upload Area -->
-  <div class="upload-area" id="uploadArea">
-    <h3>上传自定义题目</h3>
-    <p>上传 JSON 格式题目文件，格式参考 questions.json</p>
-    <label class="upload-btn" for="fileInput">
-      &#128194; 选择文件
-    </label>
-    <input type="file" id="fileInput" accept=".json" style="display:none" onchange="loadCustomQuestions(event)">
-    <p style="margin-top: 12px; font-size: 12px; color: #9ca3af;">
-      上传后将替换当前题库
-    </p>
+  <!-- Empty State -->
+  <div class="empty-state" id="emptyState" style="display:none">
+    <div class="empty-icon">&#128218;</div>
+    <h3>题库为空</h3>
+    <p>点击上方「上传题目」按钮，加载 JSON 格式的题目文件开始练习</p>
+  </div>
+
+  <!-- Upload Modal -->
+  <div class="modal-overlay" id="uploadModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>上传题目</h2>
+        <button class="modal-close" onclick="closeUploadModal()">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Upload mode -->
+        <div class="upload-mode">
+          <label class="radio-label">
+            <input type="radio" name="uploadMode" value="replace" checked>
+            <span>替换题库</span>
+            <small>清除现有题目，使用上传的题目</small>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="uploadMode" value="append">
+            <span>追加题目</span>
+            <small>在现有题目基础上添加新题目</small>
+          </label>
+        </div>
+
+        <!-- Drop zone -->
+        <div class="drop-zone" id="dropZone">
+          <div class="drop-zone-icon">&#128194;</div>
+          <div class="drop-zone-text">拖拽 JSON 文件到此处</div>
+          <div class="drop-zone-hint">或点击下方按钮选择文件</div>
+          <label class="upload-btn" for="fileInput">
+            选择文件
+          </label>
+          <input type="file" id="fileInput" accept=".json" style="display:none" onchange="handleFileSelect(event)">
+        </div>
+
+        <div class="file-info" id="fileInfo" style="display:none">
+          <span class="file-info-icon">&#128196;</span>
+          <span class="file-info-name" id="fileName"></span>
+          <button class="file-info-remove" onclick="clearFile()">&times;</button>
+        </div>
+
+        <!-- Template download -->
+        <div class="template-section">
+          <p>不知道格式？<a href="javascript:void(0)" onclick="downloadTemplate()">下载题目模板</a></p>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="modal-btn cancel" onclick="closeUploadModal()">取消</button>
+        <button class="modal-btn confirm" id="confirmUploadBtn" onclick="confirmUpload()" disabled>确认上传</button>
+      </div>
+    </div>
   </div>
 
   <!-- Result Overlay -->
