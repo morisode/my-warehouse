@@ -4,11 +4,12 @@ let filteredQuestions = [];
 let currentIndex = 0;
 let userAnswers = {};
 let currentFilter = 'all';
-let pendingFile = null;
-let pendingData = null;
-let photoStep = 1;
+let pendingImageData = null;
 let cameraStream = null;
 let bgCameraStream = null;
+
+let pendingFile = null;
+let pendingData = null;
 
 // ========== Question History (localStorage) ==========
 const HISTORY_KEY = 'quiz_question_history';
@@ -356,7 +357,8 @@ function renderQuestion() {
   filteredQuestions.forEach(fq => {
     const ans = userAnswers[fq.id];
     if (ans !== undefined) {
-      if (ans === fq.answer) correctCount++;
+      if (fq.questionImage) correctCount++; // image questions always count as "done"
+      else if (ans === fq.answer) correctCount++;
       else wrongCount++;
     }
   });
@@ -390,31 +392,55 @@ function renderQuestion() {
   document.getElementById('questionMeta').innerHTML = metaHTML;
   document.getElementById('questionNumber').textContent = `第 ${currentIndex + 1} 题 / 共 ${total} 题`;
 
-  // Question text
-  document.getElementById('questionText').innerHTML = q.question;
+  // Question text — support image-based questions
+  const questionTextEl = document.getElementById('questionText');
+  if (q.questionImage) {
+    questionTextEl.innerHTML = `<img class="question-image" src="${q.questionImage}" alt="题目图片" />`;
+    // No LaTeX rendering needed for image questions
+  } else {
+    questionTextEl.innerHTML = q.question;
+  }
 
-  // Options — raw HTML from JSON, KaTeX will process LaTeX delimiters
-  const letters = ['A', 'B', 'C', 'D'];
-  const isAnswered = userAnswers[q.id] !== undefined;
-  const optionsHTML = q.options.map((opt, i) => {
-    let cls = 'option-item';
+  // Options — image-based questions don't have selectable options
+  const optionsEl = document.getElementById('optionsList');
+  if (q.questionImage) {
+    const isAnswered = userAnswers[q.id] !== undefined;
     if (isAnswered) {
-      cls += ' disabled';
-      if (i === q.answer) cls += ' correct';
-      else if (i === userAnswers[q.id] && i !== q.answer) cls += ' wrong';
+      optionsEl.innerHTML = `<div class="image-question-status confirmed">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        已确认此题
+      </div>`;
+    } else {
+      optionsEl.innerHTML = `<button class="image-confirm-btn" onclick="confirmImageQuestion(${q.id})">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        确认已看此题
+      </button>`;
     }
-    return `
-      <div class="${cls}" onclick="selectOption(${q.id}, ${i})" data-index="${i}">
-        <div class="option-letter">${letters[i]}</div>
-        <div class="option-content">${opt}</div>
-      </div>
-    `;
-  }).join('');
-  document.getElementById('optionsList').innerHTML = optionsHTML;
+  } else {
+    // Text-based questions with options
+    const letters = ['A', 'B', 'C', 'D'];
+    const isAnswered = userAnswers[q.id] !== undefined;
+    const optionsHTML = q.options.map((opt, i) => {
+      let cls = 'option-item';
+      if (isAnswered) {
+        cls += ' disabled';
+        if (i === q.answer) cls += ' correct';
+        else if (i === userAnswers[q.id] && i !== q.answer) cls += ' wrong';
+      }
+      return `
+        <div class="${cls}" onclick="selectOption(${q.id}, ${i})" data-index="${i}">
+          <div class="option-letter">${letters[i]}</div>
+          <div class="option-content">${opt}</div>
+        </div>
+      `;
+    }).join('');
+    optionsEl.innerHTML = optionsHTML;
+  }
 
-  // Explanation
+  // Explanation — image-based questions have no explanation
   const expBox = document.getElementById('explanationBox');
-  if (isAnswered) {
+  const isAnswered = userAnswers[q.id] !== undefined;
+  if (isAnswered && !q.questionImage && q.explanation) {
     document.getElementById('explanationText').innerHTML = q.explanation || '';
     expBox.classList.add('show');
   } else {
@@ -445,6 +471,13 @@ function selectOption(questionId, optionIndex) {
   // Find the question object to check if answer is correct
   const q = allQuestions.find(q => q.id === questionId);
   if (q) recordQuestionAttempt(questionId, optionIndex === q.answer);
+  renderQuestion();
+}
+
+function confirmImageQuestion(questionId) {
+  if (userAnswers[questionId] !== undefined) return;
+  userAnswers[questionId] = -1; // special marker for image questions
+  recordAnswer();
   renderQuestion();
 }
 
@@ -480,6 +513,7 @@ function showResult() {
   filteredQuestions.forEach(q => {
     const ans = userAnswers[q.id];
     if (ans === undefined) unanswered++;
+    else if (q.questionImage) correct++; // image questions: just marking as "done" counts
     else if (ans === q.answer) correct++;
     else wrong++;
   });
@@ -660,7 +694,7 @@ function downloadTemplate() {
 
 // ========== Photo Modal ==========
 function openPhotoModal() {
-  photoStep = 1;
+  pendingImageData = null;
   resetPhotoModalUI();
   document.getElementById('photoModal').classList.add('show');
 }
@@ -673,12 +707,8 @@ function closePhotoModal() {
 function resetPhotoModalUI() {
   document.getElementById('photoStep1').style.display = '';
   document.getElementById('photoStep2').style.display = 'none';
-  document.getElementById('photoStep3').style.display = 'none';
   document.getElementById('cameraPreview').style.display = 'none';
-  document.getElementById('ocrStatus').style.display = 'flex';
-  document.getElementById('ocrResultBox').style.display = 'none';
-  document.getElementById('photoBackBtn').style.display = 'none';
-  document.getElementById('photoNextBtn').style.display = 'none';
+  document.getElementById('photoPreviewContainer').style.display = 'none';
   document.getElementById('photoAddBtn').style.display = 'none';
 }
 
@@ -686,7 +716,7 @@ function resetPhotoModalUI() {
 async function startCamera() {
   try {
     cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+      video: { facingMode: 'environment', width: { ideal: 3840 }, height: { ideal: 2160 } }
     });
     const video = document.getElementById('cameraVideo');
     video.srcObject = cameraStream;
@@ -711,99 +741,81 @@ function capturePhoto() {
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
   canvas.getContext('2d').drawImage(video, 0, 0);
+  // Use high quality PNG for best clarity
   const dataUrl = canvas.toDataURL('image/png');
   stopCamera();
-  processImageForOCR(dataUrl);
+  showPhotoPreview(dataUrl);
 }
 
 function handlePhotoSelect(event) {
   const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = (e) => processImageForOCR(e.target.result);
+  reader.onload = (e) => showPhotoPreview(e.target.result);
   reader.readAsDataURL(file);
   event.target.value = '';
 }
 
-// --- OCR ---
-async function processImageForOCR(imageSrc) {
+function showPhotoPreview(imageSrc) {
+  pendingImageData = imageSrc;
   document.getElementById('photoStep1').style.display = 'none';
   document.getElementById('photoStep2').style.display = '';
-  document.getElementById('ocrPreviewImg').src = imageSrc;
-  document.getElementById('ocrStatus').style.display = 'flex';
-  document.getElementById('ocrResultBox').style.display = 'none';
+  document.getElementById('photoPreviewImg').src = imageSrc;
+  document.getElementById('photoPreviewContainer').style.display = 'block';
   document.getElementById('photoNextBtn').style.display = 'none';
-
-  try {
-    const result = await Tesseract.recognize(imageSrc, 'chi_sim+eng', {
-      logger: m => {
-        if (m.status === 'recognizing text') {
-          const pct = Math.round((m.progress || 0) * 100);
-          document.querySelector('#ocrStatus span').textContent = `正在识别文字... ${pct}%`;
-        }
-      }
-    });
-
-    const text = result.data.text.trim();
-    document.getElementById('ocrText').value = text;
-    document.getElementById('ocrStatus').style.display = 'none';
-    document.getElementById('ocrResultBox').style.display = 'block';
-    document.getElementById('photoNextBtn').style.display = '';
-  } catch (err) {
-    document.getElementById('ocrStatus').style.display = 'none';
-    document.getElementById('ocrResultBox').style.display = 'block';
-    document.getElementById('ocrText').value = 'OCR 识别失败，请手动输入题目内容。\n错误：' + err.message;
-    document.getElementById('photoNextBtn').style.display = '';
-  }
+  document.getElementById('photoAddBtn').style.display = '';
 }
 
-// --- Photo Step Navigation ---
-function photoNext() {
-  if (photoStep === 1) return;
-  if (photoStep === 2) {
-    photoStep = 3;
-    document.getElementById('photoStep2').style.display = 'none';
-    document.getElementById('photoStep3').style.display = '';
-    document.getElementById('photoNextBtn').style.display = 'none';
-    document.getElementById('photoBackBtn').style.display = '';
-    document.getElementById('photoAddBtn').style.display = '';
-  }
-}
-
-function photoBack() {
-  if (photoStep === 3) {
-    photoStep = 2;
-    document.getElementById('photoStep3').style.display = 'none';
-    document.getElementById('photoStep2').style.display = '';
-    document.getElementById('photoAddBtn').style.display = 'none';
-    document.getElementById('photoBackBtn').style.display = 'none';
-    document.getElementById('photoNextBtn').style.display = '';
-  }
+function retakePhoto() {
+  pendingImageData = null;
+  document.getElementById('photoStep1').style.display = '';
+  document.getElementById('photoStep2').style.display = 'none';
+  document.getElementById('photoPreviewContainer').style.display = 'none';
+  document.getElementById('photoAddBtn').style.display = 'none';
 }
 
 function photoAddQuestion() {
-  const question = document.getElementById('photoQuestion').value.trim();
-  const optA = document.getElementById('photoOptA').value.trim();
-  const optB = document.getElementById('photoOptB').value.trim();
-  const optC = document.getElementById('photoOptC').value.trim();
-  const optD = document.getElementById('photoOptD').value.trim();
-
-  if (!question) { alert('请输入题目内容'); return; }
-  if (!optA || !optB || !optC || !optD) { alert('请填写全部四个选项'); return; }
-
   const maxId = allQuestions.reduce((max, q) => Math.max(max, q.id || 0), 0);
-  const newQuestion = {
-    id: maxId + 1,
-    category: document.getElementById('photoCategory').value,
-    subCategory: document.getElementById('photoSubCategory').value.trim() || '未分类',
-    difficulty: document.getElementById('photoDifficulty').value,
-    question: question,
-    options: [optA, optB, optC, optD],
-    answer: parseInt(document.getElementById('photoAnswer').value),
-    explanation: document.getElementById('photoExplanation').value.trim()
-  };
 
-  allQuestions.push(newQuestion);
+  if (pendingImageData) {
+    // Image-based question
+    const newQuestion = {
+      id: maxId + 1,
+      category: document.getElementById('photoCategory').value,
+      subCategory: document.getElementById('photoSubCategory').value.trim() || '未分类',
+      difficulty: document.getElementById('photoDifficulty').value,
+      question: '[图片题目]',
+      questionImage: pendingImageData,
+      options: [],
+      answer: -1,
+      explanation: ''
+    };
+
+    allQuestions.push(newQuestion);
+  } else {
+    // Text-based question
+    const question = document.getElementById('photoQuestion').value.trim();
+    const optA = document.getElementById('photoOptA').value.trim();
+    const optB = document.getElementById('photoOptB').value.trim();
+    const optC = document.getElementById('photoOptC').value.trim();
+    const optD = document.getElementById('photoOptD').value.trim();
+
+    if (!question) { alert('请输入题目内容'); return; }
+    if (!optA || !optB || !optC || !optD) { alert('请填写全部四个选项'); return; }
+
+    const newQuestion = {
+      id: maxId + 1,
+      category: document.getElementById('photoCategory').value,
+      subCategory: document.getElementById('photoSubCategory').value.trim() || '未分类',
+      difficulty: document.getElementById('photoDifficulty').value,
+      question: question,
+      options: [optA, optB, optC, optD],
+      answer: parseInt(document.getElementById('photoAnswer').value),
+      explanation: document.getElementById('photoExplanation').value.trim()
+    };
+
+    allQuestions.push(newQuestion);
+  }
   userAnswers = {};
   currentIndex = 0;
   filteredQuestions = [...allQuestions];
